@@ -22,6 +22,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build.VERSION_CODES;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelUuid;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -191,7 +192,7 @@ public abstract class HidPeripheral {
      * Instances for the peripheral
      */
     private final Context appContext;
-    private final Handler handler;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 	private final Object mSync = new Object();
     private final BluetoothLeAdvertiser bluetoothLeAdvertiser;
     private BluetoothGattCharacteristic inputReportCharacteristic;
@@ -218,7 +219,6 @@ public abstract class HidPeripheral {
     		throws UnsupportedOperationException {
 
         appContext = context.getApplicationContext();
-        handler = new Handler(appContext.getMainLooper());
 
         final BluetoothManager bluetoothManager
         	= (BluetoothManager) appContext.getSystemService(Context.BLUETOOTH_SERVICE);
