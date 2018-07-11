@@ -274,6 +274,7 @@ public abstract class HidPeripheral {
 			}
 			mDataSendTimer = null;
 		}
+		stopAdvertising();
 		unRegisterBroadcast();
 	}
 
