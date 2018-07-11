@@ -645,7 +645,7 @@ public abstract class HidPeripheral {
 					for (final BluetoothDevice device : devices) {
 						gattServer.cancelConnection(device);
 					}
-
+					gattServer.clearServices();
 					gattServer.close();
 					gattServer = null;
 				}
