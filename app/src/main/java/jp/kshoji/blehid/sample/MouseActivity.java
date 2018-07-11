@@ -90,10 +90,10 @@ public class MouseActivity extends AbstractBleActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-        
         if (mouse != null) {
             mouse.stopAdvertising();
+            mouse = null;
         }
+        super.onDestroy();
     }
 }

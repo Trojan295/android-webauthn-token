@@ -135,11 +135,12 @@ public class JoystickActivity extends AbstractBleActivity implements SensorEvent
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         sensorManager.unregisterListener(this, accelerometerSensor);
                 
         if (joystick != null) {
             joystick.stopAdvertising();
+            joystick = null;
         }
+        super.onDestroy();
     }
 }

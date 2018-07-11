@@ -45,10 +45,10 @@ public class KeyboardActivity extends AbstractBleActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-        
         if (keyboard != null) {
             keyboard.stopAdvertising();
+            keyboard = null;
         }
+        super.onDestroy();
     }
 }
