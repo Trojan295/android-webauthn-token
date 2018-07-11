@@ -249,9 +249,11 @@ public abstract class HidPeripheral {
             throw new UnsupportedOperationException("gattServer is null, check Bluetooth is ON.");
         }
 
+		synchronized (mSync) {
 		mSetupServiceTask = new SetupServiceTask(
 			needInputReport, needOutputReport, needFeatureReport, dataSendingRate);
 		new Thread(mSetupServiceTask, TAG).start();
+    }
     }
 	
 	@Override
