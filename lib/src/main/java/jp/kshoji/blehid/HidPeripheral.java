@@ -250,10 +250,10 @@ public abstract class HidPeripheral {
         }
 
 		synchronized (mSync) {
-		mSetupServiceTask = new SetupServiceTask(
-			needInputReport, needOutputReport, needFeatureReport, dataSendingRate);
-		new Thread(mSetupServiceTask, TAG).start();
-    }
+			mSetupServiceTask = new SetupServiceTask(
+				needInputReport, needOutputReport, needFeatureReport, dataSendingRate);
+			new Thread(mSetupServiceTask, TAG).start();
+		}
     }
 	
 	@Override
@@ -305,36 +305,42 @@ public abstract class HidPeripheral {
 		@Override
 		public void run() {
 			mIsRunning = true;
-			// setup services
-			addService(setUpHidService(needInputReport, needOutputReport, needFeatureReport));
-			addService(setUpDeviceInformationService());
-			addService(setUpBatteryService());
-			synchronized (mSync) {
-				if (mIsRunning) {
-					// send report each dataSendingRate, if data available
-					mDataSendTimer = new Timer();
-					mDataSendTimer.scheduleAtFixedRate(new TimerTask() {
-						@Override
-						public void run() {
-							final byte[] polled = inputReportQueue.poll();
-							if (polled != null && inputReportCharacteristic != null) {
-								inputReportCharacteristic.setValue(polled);
-								handler.post(() -> {
-									final Set<BluetoothDevice> devices = getDevices();
-									for (final BluetoothDevice device : devices) {
-										try {
-											if (gattServer != null) {
-												gattServer.notifyCharacteristicChanged(device, inputReportCharacteristic, false);
+			try {
+				// setup services
+				addService(setUpHidService(needInputReport, needOutputReport, needFeatureReport));
+				addService(setUpDeviceInformationService());
+				addService(setUpBatteryService());
+				synchronized (mSync) {
+					if (mIsRunning) {
+						// send report each dataSendingRate, if data available
+						mDataSendTimer = new Timer();
+						mDataSendTimer.scheduleAtFixedRate(new TimerTask() {
+							@Override
+							public void run() {
+								final byte[] polled = inputReportQueue.poll();
+								if (polled != null && inputReportCharacteristic != null) {
+									inputReportCharacteristic.setValue(polled);
+									handler.post(() -> {
+										final Set<BluetoothDevice> devices = getDevices();
+										for (final BluetoothDevice device : devices) {
+											try {
+												if (gattServer != null) {
+													gattServer.notifyCharacteristicChanged(device, inputReportCharacteristic, false);
+												}
+											} catch (final Throwable e) {
+												Log.w(TAG, e);
 											}
-										} catch (final Throwable e) {
-											Log.w(TAG, e);
 										}
-									}
-								});
+									});
+								}
 							}
-						}
-					}, 0, dataSendingRate);
+						}, 0, dataSendingRate);
+					}
 				}
+			} catch (final Exception e) {
+				Log.w(TAG, e);
+			}
+			synchronized (mSync) {
 				mSetupServiceTask = null;
 			}
 		}
