@@ -22,7 +22,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(layout.activity_main);
 
         setTitle(getString(string.ble_hid));
-        
+        // FIXME need to handle dynamic permission
+
         findViewById(id.mouseButton).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
