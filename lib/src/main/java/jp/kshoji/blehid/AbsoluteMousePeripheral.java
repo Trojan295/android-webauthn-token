@@ -1,6 +1,8 @@
 package jp.kshoji.blehid;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.util.Arrays;
@@ -52,7 +54,8 @@ public final class AbsoluteMousePeripheral extends HidPeripheral {
         // @formatter:on
     };
 
-    @Override
+    @NonNull
+	@Override
     protected byte[] getReportMap() {
         return REPORT_MAP;
     }
@@ -63,8 +66,12 @@ public final class AbsoluteMousePeripheral extends HidPeripheral {
      *
      * @param context the applicationContext
      */
-    public AbsoluteMousePeripheral(final Context context) throws UnsupportedOperationException {
-        super(context.getApplicationContext(), true, false, false, 10);
+    public AbsoluteMousePeripheral(@NonNull final Context context)
+        throws UnsupportedOperationException {
+
+        super(context,
+            true, false, false,
+            10);
     }
     
     /**
@@ -77,7 +84,9 @@ public final class AbsoluteMousePeripheral extends HidPeripheral {
      * @param rightButton true : button down
      * @param middleButton true : button down
      */
-    public void movePointer(int x, int y, int wheel, final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+    public void movePointer(int x, int y, int wheel,
+    	final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+
         if (x > 32767) x = 32767;
         if (x < 0) x = 0;
         if (y > 32767) y = 32767;
@@ -107,7 +116,7 @@ public final class AbsoluteMousePeripheral extends HidPeripheral {
     }
 
     @Override
-    protected void onOutputReport(final byte[] outputReport) {
+    protected void onOutputReport(@Nullable final byte[] outputReport) {
         // do nothing
     }
 }

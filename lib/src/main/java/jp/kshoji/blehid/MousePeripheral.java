@@ -1,6 +1,8 @@
 package jp.kshoji.blehid;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 /**
  * BLE Mouse
@@ -41,7 +43,8 @@ public final class MousePeripheral extends HidPeripheral {
             END_COLLECTION(0),
     };
 
-    @Override
+    @NonNull
+	@Override
     protected byte[] getReportMap() {
         return REPORT_MAP;
     }
@@ -52,8 +55,12 @@ public final class MousePeripheral extends HidPeripheral {
      *
      * @param context the applicationContext
      */
-    public MousePeripheral(final Context context) throws UnsupportedOperationException {
-        super(context.getApplicationContext(), true, false, false, 10);
+    public MousePeripheral(@NonNull final Context context)
+        throws UnsupportedOperationException {
+
+        super(context,
+            true, false, false,
+            10);
     }
     
     private final byte[] lastSent = new byte[4];
@@ -68,7 +75,9 @@ public final class MousePeripheral extends HidPeripheral {
      * @param rightButton true : button down
      * @param middleButton true : button down
      */
-    public void movePointer(int dx, int dy, int wheel, final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+    public void movePointer(int dx, int dy, int wheel,
+    	final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+
         if (dx > 127) dx = 127;
         if (dx < -127) dx = -127;
         if (dy > 127) dy = 127;
@@ -104,7 +113,7 @@ public final class MousePeripheral extends HidPeripheral {
     }
 
     @Override
-    protected void onOutputReport(final byte[] outputReport) {
+    protected void onOutputReport(@Nullable final byte[] outputReport) {
         // do nothing
     }
 }

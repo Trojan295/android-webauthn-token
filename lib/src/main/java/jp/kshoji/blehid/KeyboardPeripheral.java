@@ -1,6 +1,8 @@
 package jp.kshoji.blehid;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.util.Arrays;
@@ -306,7 +308,8 @@ public final class KeyboardPeripheral extends HidPeripheral {
             END_COLLECTION(0),
     };
 
-    @Override
+    @NonNull
+	@Override
     protected byte[] getReportMap() {
         return REPORT_MAP;
     }
@@ -317,8 +320,12 @@ public final class KeyboardPeripheral extends HidPeripheral {
      *
      * @param context the applicationContext
      */
-    public KeyboardPeripheral(final Context context) throws UnsupportedOperationException {
-        super(context.getApplicationContext(), true, true, false, 20);
+    public KeyboardPeripheral(@NonNull final Context context)
+        throws UnsupportedOperationException {
+
+        super(context,
+            true, true, false,
+            20);
     }
     
     private static final int KEY_PACKET_MODIFIER_KEY_INDEX = 0;
@@ -368,7 +375,7 @@ public final class KeyboardPeripheral extends HidPeripheral {
     }
 
     @Override
-    protected void onOutputReport(final byte[] outputReport) {
+    protected void onOutputReport(@Nullable final byte[] outputReport) {
         Log.i(TAG, "onOutputReport data: " + Arrays.toString(outputReport));
     }
 }

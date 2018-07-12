@@ -1,6 +1,8 @@
 package jp.kshoji.blehid;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 /**
  * BLE Joystick
@@ -47,11 +49,16 @@ public class JoystickPeripheral extends HidPeripheral {
      *
      * @param context the applicationContext
      */
-    public JoystickPeripheral(final Context context) throws UnsupportedOperationException {
-        super(context.getApplicationContext(), true, false, false, 10);
+    public JoystickPeripheral(@NonNull final Context context)
+        throws UnsupportedOperationException {
+
+        super(context,
+            true, false, false,
+            10);
     }
 
-    @Override
+    @NonNull
+	@Override
     protected byte[] getReportMap() {
         return REPORT_MAP;
     }
@@ -66,7 +73,9 @@ public class JoystickPeripheral extends HidPeripheral {
      * @param rightButton true : button down
      * @param middleButton true : button down
      */
-    public void movePointer(int dx, int dy, int dz, final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+    public void movePointer(int dx, int dy, int dz,
+    	final boolean leftButton, final boolean rightButton, final boolean middleButton) {
+
         if (dx > 127) dx = 127;
         if (dx < -127) dx = -127;
         if (dy > 127) dy = 127;
@@ -94,7 +103,7 @@ public class JoystickPeripheral extends HidPeripheral {
     }
 
     @Override
-    protected void onOutputReport(byte[] outputReport) {
+    protected void onOutputReport(@Nullable final byte[] outputReport) {
         // do nothing
     }
 }

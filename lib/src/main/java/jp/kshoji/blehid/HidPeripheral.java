@@ -160,13 +160,20 @@ public abstract class HidPeripheral {
      * Represents Report Map byte array
      * @return Report Map data
      */
+    @NonNull
     protected abstract byte[] getReportMap();
-    
-    /**
-     * HID Input Report
-     */
-    private final Queue<byte[]> inputReportQueue = new ConcurrentLinkedQueue<>();
-    protected final void addInputReport(final byte[] inputReport) {
+
+	/**
+	 * Queue of input report
+	 */
+	private final Queue<byte[]> inputReportQueue = new ConcurrentLinkedQueue<>();
+	
+	/**
+	 * HID Input Report
+	 * FIXME should be better to reuse buffer using buffer pool to reduce unnecessary memory allocation(to improve performance)
+	 * @param inputReport
+	 */
+	protected final void addInputReport(@Nullable final byte[] inputReport) {
         if (inputReport != null && inputReport.length > 0) {
             inputReportQueue.offer(inputReport);
         }
@@ -177,7 +184,7 @@ public abstract class HidPeripheral {
      *
      * @param outputReport the report data
      */
-    protected abstract void onOutputReport(final byte[] outputReport);
+    protected abstract void onOutputReport(@Nullable final byte[] outputReport);
 
     /**
      * Gatt Characteristic Descriptor
@@ -191,6 +198,7 @@ public abstract class HidPeripheral {
     /**
      * Instances for the peripheral
      */
+    @NonNull
     private final Context appContext;
     private final Handler handler = new Handler(Looper.getMainLooper());
 	private final Object mSync = new Object();
@@ -256,6 +264,10 @@ public abstract class HidPeripheral {
 		}
     }
 	
+	/**
+	 * destructor
+	 * @throws Throwable
+	 */
 	@Override
 	protected void finalize() throws Throwable {
 		try {
@@ -265,6 +277,9 @@ public abstract class HidPeripheral {
 		}
 	}
 	
+	/**
+	 * release related resources
+	 */
 	public void release() {
 		synchronized (mSync) {
 			if (mSetupServiceTask != null) {
@@ -354,20 +369,23 @@ public abstract class HidPeripheral {
 			if (DEBUG) Log.v(TAG, "addService:" + service.getUuid());
 			mServiceAdded = false;
 			try {
-				if (gattServer.addService(service)) {
-					synchronized (mSync) {
+				synchronized (mSync) {
+					if (gattServer.addService(service)) {
+						// wait until BluetoothGattServerCallback#onServiceAdded is called.
 						for ( ; mIsRunning && !mServiceAdded; ) {
 							mSync.wait(1000);
 						}
 						if (mIsRunning) {
+							// additional wait for 30 millis to avoid issue on BluetoothGattServer#addService
 							mSync.wait(30);
 						}
+						if (DEBUG) Log.v(TAG, "addService:" + service.getUuid() + " added.");
+						return;
 					}
-					if (DEBUG) Log.v(TAG, "addService:" + service.getUuid() + " added.");
-					return;
 				}
 			} catch (final Exception e) {
 				Log.w(TAG, "Adding Service failed", e);
+				return;
 			}
 			Log.w(TAG, "Adding Service failed");
 		}
@@ -378,6 +396,7 @@ public abstract class HidPeripheral {
      *
      * @return the service
      */
+	@NonNull
     private static BluetoothGattService setUpDeviceInformationService() {
         final BluetoothGattService service
         	= new BluetoothGattService(SERVICE_DEVICE_INFORMATION, BluetoothGattService.SERVICE_TYPE_PRIMARY);
@@ -420,6 +439,7 @@ public abstract class HidPeripheral {
      *
      * @return the service
      */
+	@NonNull
     private static BluetoothGattService setUpBatteryService() {
         final BluetoothGattService service
         	= new BluetoothGattService(SERVICE_BATTERY, BluetoothGattService.SERVICE_TYPE_PRIMARY);
@@ -455,6 +475,7 @@ public abstract class HidPeripheral {
      * @param isNeedFeatureReport true: serves 'Feature Report' BLE characteristic
      * @return the service
      */
+    @NonNull
     private BluetoothGattService setUpHidService(
     	final boolean isNeedInputReport,
     	final boolean isNeedOutputReport,
