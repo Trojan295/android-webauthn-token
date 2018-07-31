@@ -36,5 +36,15 @@ uploadArchives {
         repository url: 'file://' + file('../lib/repository').absolutePath
         pom.version = '0.0.1'
         pom.artifactId = 'ble-hid'
+        pom.project {
+            inceptionYear '2017'
+            licenses {
+                license {
+                    name 'The Apache Software License, Version 2.0'
+                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+        }
     }
 }
