@@ -1,15 +1,16 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion versionCompiler
-   	buildToolsVersion versionBuildTool
+   	buildToolsVersion '28.0.3'
    	compileOptions {
    		sourceCompatibility javaSourceCompatibility
    		targetCompatibility javaTargetCompatibility
    	}
     defaultConfig {
         applicationId "jp.kshoji.blehid.sample"
-        minSdkVersion 21
+        minSdkVersion 25
         targetSdkVersion versionTarget
         versionCode versionCodeNum
         versionName versionNameString
@@ -35,10 +36,19 @@ dependencies {
    	implementation "com.android.support:support-annotations:${supportLibVersion}"
     implementation "com.android.support.constraint:constraint-layout:${constraintLayoutVersion}"
 
+    api 'com.google.guava:guava:27.0.1-android'
+    api group: 'com.madgag.spongycastle', name: 'core', version: '1.58.0.0'
+    api group: 'com.madgag.spongycastle', name: 'bcpkix-jdk15on', version: '1.58.0.0'
+    //api group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.60'
+    //api group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.60'
+
     androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     testImplementation 'junit:junit:4.12'
 
-    implementation project(':lib')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
+repositories {
+    mavenCentral()
 }
