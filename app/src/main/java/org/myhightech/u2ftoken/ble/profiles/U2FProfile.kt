@@ -1,4 +1,4 @@
-package org.myhightech.u2ftoken.ble.u2f
+package org.myhightech.u2ftoken.ble.profiles
 
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
@@ -11,48 +11,20 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelUuid
 import android.text.TextUtils
 import android.util.Log
-import org.myhightech.u2ftoken.ble.util.BleUuidUtils
-import java.nio.charset.StandardCharsets
+import org.myhightech.u2ftoken.ble.services.DeviceInformationService
+import org.myhightech.u2ftoken.ble.services.FIDO2AuthenticatorService
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class U2FPeripheral(context: Context) {
+class U2FProfile(context: Context) {
     private val tag: String = this.javaClass.simpleName
     private val debug: Boolean = true
 
-    private val SERVICE_DEVICE_INFORMATION = BleUuidUtils.fromShortValue(0x180A)
-    private val CHARACTERISTIC_MANUFACTURER_NAME = BleUuidUtils.fromShortValue(0x2A29)
-    private val CHARACTERISTIC_MODEL_NUMBER = BleUuidUtils.fromShortValue(0x2A24)
-    private val CHARACTERISTIC_FIRMWARE_REVISION = BleUuidUtils.fromShortValue(0x2A26)
-    private val DEVICE_NAME_MAX_LENGTH = 20
-
-    private var manufacturer = "MHT Corp."
-    private var firmwareRevision = "0.1"
-    var deviceName: String = "U2F Token"
-        set(value) {
-            val deviceNameBytes = value.toByteArray(StandardCharsets.UTF_8)
-            field = if (deviceNameBytes.size > DEVICE_NAME_MAX_LENGTH) {
-                val bytes = ByteArray(DEVICE_NAME_MAX_LENGTH)
-                System.arraycopy(deviceNameBytes, 0, bytes, 0, 20)
-                String(bytes, StandardCharsets.UTF_8)
-            } else {
-                value
-            }
-        }
-
-    private val SERVICE_U2F_AUTHENTICATOR = BleUuidUtils.fromShortValue(0xFFFD)
-    private val CHARACTERISTIC_U2F_CONTROL_POINT = UUID.fromString("F1D0FFF1-DEAA-ECEE-B42F-C9BA7ED623BB")
-    private val CHARACTERISTIC_U2F_STATUS = UUID.fromString("F1D0FFF2-DEAA-ECEE-B42F-C9BA7ED623BB")
-    private val CHARACTERISTIC_U2F_CONTROL_POINT_LENGTH = UUID.fromString("F1D0FFF3-DEAA-ECEE-B42F-C9BA7ED623BB")
-    private val CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD = UUID.fromString("F1D0FFF4-DEAA-ECEE-B42F-C9BA7ED623BB")
-
-    private val serviceRevisionBitfield = byteArrayOf(64.toByte()) // 1.2 support
-    private val controlPointLength = byteArrayOf(0x02, 0x00)
+    private val services = listOf(DeviceInformationService(), FIDO2AuthenticatorService())
 
     private val handler = Handler(Looper.getMainLooper())
     private val lock = ReentrantLock()
@@ -107,20 +79,15 @@ class U2FPeripheral(context: Context) {
     private inner class SetupServiceTask : Runnable {
 
         @Volatile
-        private var mIsRunning: Boolean = false
+        var mIsRunning: Boolean = false
         @Volatile
         var mServiceAdded: Boolean = false
 
         override fun run() {
             mIsRunning = true
             try {
-                addService(setUpU2FAuthenticatorDevice())
-                addService(setUpDeviceInformationService())
-                lock.withLock {
-                    if (mIsRunning) {
-
-                    }
-                }
+                addService(services[0].setupService())
+                addService(services[1].setupService())
             } catch (e: Exception) {
                 Log.w(tag, e)
             }
@@ -155,89 +122,6 @@ class U2FPeripheral(context: Context) {
 
             Log.w(tag, "Adding Service failed")
         }
-    }
-
-    private fun setUpDeviceInformationService(): BluetoothGattService {
-        val service = BluetoothGattService(SERVICE_DEVICE_INFORMATION, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_MANUFACTURER_NAME,
-                    BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_MODEL_NUMBER,
-                    BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_FIRMWARE_REVISION,
-                    BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-
-        return service
-    }
-
-    private fun setUpU2FAuthenticatorDevice(): BluetoothGattService {
-        val service = BluetoothGattService(SERVICE_U2F_AUTHENTICATOR, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_U2F_CONTROL_POINT,
-                    BluetoothGattCharacteristic.PROPERTY_WRITE,
-                    BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_U2F_STATUS,
-                    BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED)
-
-            val clientCharacteristicConfigurationDescriptor = BluetoothGattDescriptor(
-                    Companion.DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION,
-                    BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
-                            or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED or BluetoothGattDescriptor.PERMISSION_WRITE)
-            clientCharacteristicConfigurationDescriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            characteristic.addDescriptor(clientCharacteristicConfigurationDescriptor)
-
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_U2F_CONTROL_POINT_LENGTH,
-                    BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-        run {
-            val characteristic = BluetoothGattCharacteristic(
-                    CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD,
-                    BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED)
-            if (!service.addCharacteristic(characteristic)) {
-                throw RuntimeException("failed to add characteristic")
-            }
-        }
-
-        return service
     }
 
     private val gattServerCallback = object : BluetoothGattServerCallback() {
@@ -281,10 +165,8 @@ class U2FPeripheral(context: Context) {
                     synchronized(bluetoothDevicesMap) {
                         bluetoothDevicesMap.remove(deviceAddress)
                     }
-                    // try reconnect immediately
                     handler.post {
                         if (gattServer != null) {
-                            // gattServer.cancelConnection(device);
                             gattServer!!.connect(device, true)
                         }
                     }
@@ -292,73 +174,59 @@ class U2FPeripheral(context: Context) {
 
                 else -> {
                 }
-            }// do nothing
+            }
         }
 
         override fun onCharacteristicReadRequest(device: BluetoothDevice,
                                                  requestId: Int, offset: Int,
                                                  characteristic: BluetoothGattCharacteristic) {
-
+            Log.v(tag, "onCharacteristicReadRequest characteristic: " + characteristic.uuid + ", offset: " + offset)
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
             if (gattServer == null) {
                 return
             }
-            Log.v(tag, "onCharacteristicReadRequest characteristic: " + characteristic.uuid + ", offset: " + offset)
 
             handler.post {
                 val characteristicUuid = characteristic.uuid
-                when {
-                    BleUuidUtils.matches(CHARACTERISTIC_MANUFACTURER_NAME, characteristicUuid) -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, manufacturer.toByteArray(StandardCharsets.UTF_8))
-
-                    BleUuidUtils.matches(CHARACTERISTIC_FIRMWARE_REVISION, characteristicUuid) -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, firmwareRevision.toByteArray(StandardCharsets.UTF_8))
-
-                    BleUuidUtils.matches(CHARACTERISTIC_MODEL_NUMBER, characteristicUuid) -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, deviceName.toByteArray(StandardCharsets.UTF_8))
-
-                    BleUuidUtils.matches(CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD, characteristicUuid) -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, serviceRevisionBitfield)
-
-                    BleUuidUtils.matches(CHARACTERISTIC_U2F_CONTROL_POINT_LENGTH, characteristicUuid) -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, controlPointLength)
-
-                    else -> gattServer!!.sendResponse(device, requestId,
-                            BluetoothGatt.GATT_SUCCESS, 0, characteristic.value)
+                services.forEach { service ->
+                    service.takeIf { it.getCharacteristics().contains(characteristicUuid) }
+                            ?.onCharacteristicsRead(gattServer!!, device, requestId, offset, characteristic)
                 }
             }
         }
 
         override fun onDescriptorReadRequest(device: BluetoothDevice, requestId: Int, offset: Int, descriptor: BluetoothGattDescriptor) {
-            super.onDescriptorReadRequest(device, requestId, offset, descriptor)
             Log.v(tag, "onDescriptorReadRequest requestId: " + requestId + ", offset: " + offset + ", descriptor: " + descriptor.uuid)
+            super.onDescriptorReadRequest(device, requestId, offset, descriptor)
         }
 
         override fun onCharacteristicWriteRequest(device: BluetoothDevice, requestId: Int, characteristic: BluetoothGattCharacteristic, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray) {
-            super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
             Log.v(tag, "onCharacteristicWriteRequest characteristic: " + characteristic.uuid + ", value: " + Arrays.toString(value))
+            super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
 
             if (gattServer == null) {
                 return
             }
 
-            if (responseNeeded) {
-                gattServer!!.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf())
+            handler.post {
+                val characteristicUuid = characteristic.uuid
+                services.forEach { service ->
+                    service.takeIf { it.getCharacteristics().contains(characteristicUuid) }
+                            ?.onCharacteristicsWrite(gattServer!!, device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
+                }
             }
         }
 
         override fun onDescriptorWriteRequest(device: BluetoothDevice, requestId: Int, descriptor: BluetoothGattDescriptor, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray) {
-            super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
             Log.v(tag, "onDescriptorWriteRequest descriptor: " + descriptor.uuid + ", value: " + Arrays.toString(value) + ", responseNeeded: " + responseNeeded + ", preparedWrite: " + preparedWrite)
+            super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
 
             descriptor.value = value
 
             if (responseNeeded) {
-                if (BleUuidUtils.matches(Companion.DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION, descriptor.uuid)) {
-                    // send empty
-                    if (gattServer != null) {
-                        gattServer!!.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf())
-                    }
+                services.forEach { service ->
+                    service.takeIf { it.getDescriptors().contains(descriptor.uuid) }
+                            ?.onDescriptorWrite(gattServer!!, device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
                 }
             }
         }
@@ -367,8 +235,6 @@ class U2FPeripheral(context: Context) {
             super.onServiceAdded(status, service)
             Log.v(tag, "onServiceAdded status: " + status + ", service: " + service.uuid)
 
-            // workaround to avoid issue of BluetoothGattServer#addService
-            // when adding multiple BluetoothGattServices continuously.
             lock.withLock {
                 if (mSetupServiceTask != null) {
                     mSetupServiceTask!!.mServiceAdded = true
@@ -407,15 +273,15 @@ class U2FPeripheral(context: Context) {
         }
 
         lock.withLock {
-            mSetupServiceTask = SetupServiceTask(20)
+            mSetupServiceTask = SetupServiceTask()
             Thread(mSetupServiceTask, tag).start()
         }
     }
 
     fun startAdvertising() {
+        Log.i(tag, "startAdvertising")
         registerBroadcast()
         handler.post {
-            // set up advertising setting
             val advertiseSettings = AdvertiseSettings.Builder()
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                     .setConnectable(true)
@@ -423,18 +289,17 @@ class U2FPeripheral(context: Context) {
                     .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                     .build()
 
-            // set up advertising data
             val advertiseData = AdvertiseData.Builder()
-                    .setIncludeTxPowerLevel(true)
+                    .setIncludeTxPowerLevel(false)
                     .setIncludeDeviceName(true)
-                    .addServiceUuid(ParcelUuid.fromString(SERVICE_DEVICE_INFORMATION.toString()))
-                    .addServiceUuid(ParcelUuid.fromString(SERVICE_U2F_AUTHENTICATOR.toString()))
+                    .addServiceUuid(services[0].getPrimaryServiceUUID())
+                    .addServiceUuid(services[1].getPrimaryServiceUUID())
                     .build()
 
             // set up scan result
             val scanResult = AdvertiseData.Builder()
-                    .addServiceUuid(ParcelUuid.fromString(SERVICE_DEVICE_INFORMATION.toString()))
-                    .addServiceUuid(ParcelUuid.fromString(SERVICE_U2F_AUTHENTICATOR.toString()))
+                    .addServiceUuid(services[0].getPrimaryServiceUUID())
+                    .addServiceUuid(services[1].getPrimaryServiceUUID())
                     .build()
 
             Log.v(tag, "advertiseData: $advertiseData, scanResult: $scanResult")
@@ -444,6 +309,7 @@ class U2FPeripheral(context: Context) {
     }
 
     fun stopAdvertising() {
+        Log.i(tag, "stopAdvertising")
         unRegisterBroadcast()
         handler.post {
             try {
@@ -501,9 +367,5 @@ class U2FPeripheral(context: Context) {
             deviceSet = HashSet<BluetoothDevice>(bluetoothDevicesMap.values)
         }
         return Collections.unmodifiableSet(deviceSet)
-    }
-
-    companion object {
-        const val DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION = BleUuidUtils.fromShortValue(0x2902)
     }
 }

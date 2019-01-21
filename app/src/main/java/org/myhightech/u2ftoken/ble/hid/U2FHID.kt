@@ -89,7 +89,7 @@ object U2FHID {
         abstract fun serializePayload(): ByteArray
     }
 
-    class U2FHIDErrorResponse() : U2FHIDResponse() {
+    class U2FHIDErrorResponse : U2FHIDResponse() {
         override fun serializePayload(): ByteArray {
             return byteArrayOf(0x01) // always return COMMAND_UNKNOWN error
         }

@@ -2,12 +2,12 @@ package org.myhightech.u2ftoken.android
 
 import android.os.Bundle
 import org.myhightech.u2ftoken.R
-import org.myhightech.u2ftoken.ble.u2f.U2FPeripheral
+import org.myhightech.u2ftoken.ble.profiles.U2FProfile
 
 
 class U2FActivity : AbstractBleActivity() {
 
-    private var mU2FPeripheral: U2FPeripheral? = null
+    private var mU2FPeripheral: U2FProfile? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -17,8 +17,7 @@ class U2FActivity : AbstractBleActivity() {
     }
 
     override fun setupBlePeripheralProvider() {
-        mU2FPeripheral = U2FPeripheral(this)
-        mU2FPeripheral!!.deviceName = "U2F Token"
+        mU2FPeripheral = U2FProfile(this)
         mU2FPeripheral!!.startAdvertising()
     }
 

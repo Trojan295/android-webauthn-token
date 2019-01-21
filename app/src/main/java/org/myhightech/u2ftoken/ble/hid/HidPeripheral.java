@@ -502,7 +502,7 @@ public abstract class HidPeripheral {
             	= new BluetoothGattDescriptor(
                     DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION,
                     BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
-                    	| BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED | BluetoothGattDescriptor.PERMISSION_WRITE);
+                    	| BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
             clientCharacteristicConfigurationDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             characteristic.addDescriptor(clientCharacteristicConfigurationDescriptor);
 
