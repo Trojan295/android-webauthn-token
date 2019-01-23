@@ -3,26 +3,14 @@ package org.myhightech.u2ftoken.ble.services
 import android.bluetooth.*
 import android.os.ParcelUuid
 import android.util.Log
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.base.GeneratorBase
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory
-import com.fasterxml.jackson.dataformat.cbor.CBORGenerator
-import com.fasterxml.jackson.dataformat.cbor.CBORParser
 import com.google.common.primitives.Shorts
 import org.myhightech.u2ftoken.ble.util.BleUuidUtils
-import org.myhightech.u2ftoken.fido2.GetIntoResponse
-import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
+import org.myhightech.u2ftoken.fido2.FIDORequest
 import java.util.*
 import kotlin.experimental.and
 
 class FIDO2AuthenticatorService : GattService {
     private val tag = javaClass.simpleName
-
-    val AAGUID = byteArrayOf(173.toByte(), 51, 225.toByte(), 30, 242.toByte(), 194.toByte(),
-            52, 188.toByte(), 136.toByte(), 149.toByte(), 129.toByte(), 254.toByte(), 124.toByte(),
-            76, 160.toByte(), 205.toByte())
 
     private val DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION = BleUuidUtils.fromShortValue(0x2902)
 
@@ -153,17 +141,14 @@ class FIDO2AuthenticatorService : GattService {
                     if (it.length.toInt() == it.data.size) {
                         Log.v(tag, "onCharacteristicsWrite message ready: ${it.command}, ${Arrays.toString(it.data.toByteArray())}")
 
-                        val data = GetIntoResponse(arrayOf("FIDO_2_0"),
-                                AAGUID)
+                        val request = FIDORequest.parse(it.data.toByteArray())
+                        val response = request.response()
 
-
-                        val res = mutableListOf<Byte>()
-                        res.add(0)
-                        res.addAll(data.toCbor().toList())
+                        val responseBytes = response.serialize()
 
                         val result = mutableListOf<Byte>()
-                        result.addAll(byteArrayOf(-125, 0, res.size.toByte()).toList())
-                        result.addAll(res.toList())
+                        result.addAll(byteArrayOf(-125, 0, responseBytes.size.toByte()).toList())
+                        result.addAll(responseBytes.toList())
 
                         Log.v(tag, "onCharacteristicsWrite response: ${Arrays.toString(result.toByteArray())}")
 
@@ -193,8 +178,6 @@ class FIDO2AuthenticatorService : GattService {
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf())
         }
     }
-
-    class AuthenticatorRequest(val command: Byte, val params: ByteArray)
 
     class FIDO2Request(val command: Byte, val length: Short, val data: MutableList<Byte>)
 }
