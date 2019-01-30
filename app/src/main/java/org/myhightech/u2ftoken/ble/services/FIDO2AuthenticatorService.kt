@@ -4,12 +4,16 @@ import android.bluetooth.*
 import android.os.ParcelUuid
 import android.util.Log
 import com.google.common.primitives.Shorts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.myhightech.u2ftoken.ble.util.BleUuidUtils
 import org.myhightech.u2ftoken.fido2.FIDORequest
+import org.myhightech.u2ftoken.fido2.FIDOToken
 import java.util.*
 import kotlin.experimental.and
 
-class FIDO2AuthenticatorService : GattService {
+class FIDO2AuthenticatorService(private val fidoToken: FIDOToken) : GattService {
     private val tag = javaClass.simpleName
 
     private val DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION = BleUuidUtils.fromShortValue(0x2902)
@@ -23,7 +27,7 @@ class FIDO2AuthenticatorService : GattService {
     private val serviceRevisionBitfield = byteArrayOf(0x20.toByte())  // FIDO2 support
     private val controlPointLength = byteArrayOf(0x02, 0x00)        // 512 byte packets
 
-    private var fidoRequest: FIDO2Request? = null
+    private var fidoPacket: FIDO2Packet? = null
 
     private var fidoStatusCharacteristic: BluetoothGattCharacteristic? = null
 
@@ -109,7 +113,7 @@ class FIDO2AuthenticatorService : GattService {
         }
     }
 
-
+    data class FIDO2Packet(val command: Byte, val length: Short, val data: MutableList<Byte>)
 
     override fun onCharacteristicsWrite(gattServer: BluetoothGattServer,
                                         device: BluetoothDevice,
@@ -125,36 +129,31 @@ class FIDO2AuthenticatorService : GattService {
 
             CHARACTERISTIC_U2F_CONTROL_POINT -> {
                 if (value[0] and 0x80.toByte() == 0x80.toByte()) {
-                    assert(fidoRequest == null)
+                    assert(fidoPacket == null)
                     val command = value[0]
                     val length = Shorts.fromByteArray(value.sliceArray(1..2))
                     val data = value.slice(3 until value.size)
-                    fidoRequest = FIDO2Request(command, length, data.toMutableList())
+                    fidoPacket = FIDO2Packet(command, length, data.toMutableList())
                 } else {
-                    assert(fidoRequest != null)
-                    //val seq = value[0]
+                    assert(fidoPacket != null)
                     val data = value.slice(1 until value.size)
-                    fidoRequest!!.data.addAll(data)
+                    fidoPacket!!.data.addAll(data)
                 }
 
-                fidoRequest!!.let {
+                fidoPacket!!.let {
                     if (it.length.toInt() == it.data.size) {
-                        Log.v(tag, "onCharacteristicsWrite message ready: ${it.command}, ${Arrays.toString(it.data.toByteArray())}")
-
                         val request = FIDORequest.parse(it.data.toByteArray())
-                        val response = request.response()
 
-                        val responseBytes = response.serialize()
+                        GlobalScope.launch(Dispatchers.Default) {
+                            val response = request.response(fidoToken)
 
-                        val result = mutableListOf<Byte>()
-                        result.addAll(byteArrayOf(-125, 0, responseBytes.size.toByte()).toList())
-                        result.addAll(responseBytes.toList())
+                            val responseBytes = response.serialize()
+                            val responseSize = responseBytes.size.toShort()
+                            val result = byteArrayOf(-125, *Shorts.toByteArray(responseSize), *responseBytes)
 
-                        Log.v(tag, "onCharacteristicsWrite response: ${Arrays.toString(result.toByteArray())}")
-
-                        fidoStatusCharacteristic!!.value = result.toByteArray()
-                        gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
-
+                            fidoStatusCharacteristic!!.value = result
+                            gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
+                        }
                     }
                 }
             }
@@ -178,6 +177,4 @@ class FIDO2AuthenticatorService : GattService {
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf())
         }
     }
-
-    class FIDO2Request(val command: Byte, val length: Short, val data: MutableList<Byte>)
 }

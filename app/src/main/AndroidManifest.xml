@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -24,7 +26,6 @@
             </intent-filter>
         </activity>
         <activity android:name="org.myhightech.u2ftoken.android.U2FActivity" android:launchMode="singleTask" />
-        <activity android:name="org.myhightech.u2ftoken.android.MouseActivity" android:launchMode="singleTask" />
     </application>
 
 </manifest>

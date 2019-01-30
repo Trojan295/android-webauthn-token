@@ -13,18 +13,21 @@ import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
 import android.util.Log
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.myhightech.u2ftoken.ble.services.DeviceInformationService
 import org.myhightech.u2ftoken.ble.services.FIDO2AuthenticatorService
+import org.myhightech.u2ftoken.fido2.FIDOToken
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class U2FProfile(context: Context) {
+class U2FProfile(context: Context, token: FIDOToken) {
     private val tag: String = this.javaClass.simpleName
     private val debug: Boolean = true
 
-    private val services = listOf(DeviceInformationService(), FIDO2AuthenticatorService())
+    private val services = listOf(DeviceInformationService(), FIDO2AuthenticatorService(token))
 
     private val handler = Handler(Looper.getMainLooper())
     private val lock = ReentrantLock()
@@ -204,15 +207,13 @@ class U2FProfile(context: Context) {
             Log.v(tag, "onCharacteristicWriteRequest characteristic: " + characteristic.uuid + ", value: " + Arrays.toString(value))
             super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
 
-            if (gattServer == null) {
-                return
-            }
-
-            handler.post {
-                val characteristicUuid = characteristic.uuid
-                services.forEach { service ->
-                    service.takeIf { it.getCharacteristics().contains(characteristicUuid) }
-                            ?.onCharacteristicsWrite(gattServer!!, device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
+            if (gattServer != null) {
+                handler.post {
+                    val characteristicUuid = characteristic.uuid
+                    services.forEach { service ->
+                        service.takeIf { it.getCharacteristics().contains(characteristicUuid) }
+                                ?.onCharacteristicsWrite(gattServer!!, device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
+                    }
                 }
             }
         }
