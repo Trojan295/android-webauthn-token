@@ -8,12 +8,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.myhightech.u2ftoken.ble.util.BleUuidUtils
-import org.myhightech.u2ftoken.fido2.FIDORequest
-import org.myhightech.u2ftoken.fido2.FIDOToken
+import org.myhightech.u2ftoken.fido2.FIDO2Response
+import org.myhightech.u2ftoken.fido2.FIDO2Token
+import org.myhightech.u2ftoken.fido2.FIDO2TokenCallback
 import java.util.*
 import kotlin.experimental.and
 
-class FIDO2AuthenticatorService(private val fidoToken: FIDOToken) : GattService {
+class FIDO2AuthenticatorService(val fidoToken: FIDO2Token) : GattService {
     private val tag = javaClass.simpleName
 
     private val DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION = BleUuidUtils.fromShortValue(0x2902)
@@ -142,17 +143,21 @@ class FIDO2AuthenticatorService(private val fidoToken: FIDOToken) : GattService 
 
                 fidoPacket!!.let {
                     if (it.length.toInt() == it.data.size) {
-                        val request = FIDORequest.parse(it.data.toByteArray())
-
                         GlobalScope.launch(Dispatchers.Default) {
-                            val response = request.response(fidoToken)
+                            fidoToken.dispatch(it.data.toByteArray(), object : FIDO2TokenCallback {
+                                override fun sendKeepAlive() {
+                                    val payload = byteArrayOf(0x82.toByte(), 0,1, 0x02)
+                                    fidoStatusCharacteristic!!.value = payload
+                                    gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
+                                }
 
-                            val responseBytes = response.serialize()
-                            val responseSize = responseBytes.size.toShort()
-                            val result = byteArrayOf(-125, *Shorts.toByteArray(responseSize), *responseBytes)
-
-                            fidoStatusCharacteristic!!.value = result
-                            gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
+                                override fun sendMessage(message: ByteArray) {
+                                    val messageSize = message.size.toShort()
+                                    val payload = byteArrayOf(-125, *Shorts.toByteArray(messageSize), *message)
+                                    fidoStatusCharacteristic!!.value = payload
+                                    gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
+                                }
+                            })
                         }
                     }
                 }

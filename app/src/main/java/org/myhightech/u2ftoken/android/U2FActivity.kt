@@ -3,26 +3,21 @@ package org.myhightech.u2ftoken.android
 import android.Manifest
 import android.content.Context
 import android.content.DialogInterface
-import android.content.pm.PackageManager
 import android.hardware.biometrics.BiometricPrompt
-import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
-import android.util.Log
-import android.widget.Toast
 import org.myhightech.u2ftoken.R
-import org.myhightech.u2ftoken.ble.profiles.U2FProfile
-import org.myhightech.u2ftoken.fido2.FIDOToken
-import org.myhightech.u2ftoken.fido2.FIDOUserCallback
-import org.myhightech.u2ftoken.fido2.FIDOUserInterface
-import android.support.annotation.NonNull
+import org.myhightech.u2ftoken.ble.profiles.BLEProfile
+import org.myhightech.u2ftoken.ble.services.DeviceInformationService
+import org.myhightech.u2ftoken.ble.services.FIDO2AuthenticatorService
+import org.myhightech.u2ftoken.fido2.FIDO2Token
+import org.myhightech.u2ftoken.fido2.FIDO2UserCallback
+import org.myhightech.u2ftoken.fido2.FIDO2UserInterface
 
 
+class U2FActivity : AbstractBleActivity(), FIDO2UserInterface {
 
-
-class U2FActivity : AbstractBleActivity(), FIDOUserInterface {
-
-    private var mU2FPeripheral: U2FProfile? = null
+    private var mBLEPeripheral: BLEProfile? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,25 +28,27 @@ class U2FActivity : AbstractBleActivity(), FIDOUserInterface {
     }
 
     override fun setupBlePeripheralProvider() {
-        val fidoToken = FIDOToken(
+
+
+        val fidoToken = FIDO2Token(
                 byteArrayOf(173.toByte(), 51, 225.toByte(), 30, 242.toByte(), 194.toByte(),
                         52, 188.toByte(), 136.toByte(), 149.toByte(), 129.toByte(), 254.toByte(), 124.toByte(),
                         76, 160.toByte(), 205.toByte())
                 , this.getPreferences(Context.MODE_PRIVATE), this)
 
-        mU2FPeripheral = U2FProfile(this, fidoToken)
-        mU2FPeripheral!!.startAdvertising()
+        mBLEPeripheral = BLEProfile(this, sequenceOf(DeviceInformationService(), FIDO2AuthenticatorService(fidoToken)))
+        mBLEPeripheral!!.startAdvertising()
     }
 
     override fun onDestroy() {
-        if (mU2FPeripheral != null) {
-            mU2FPeripheral!!.stopAdvertising()
-            mU2FPeripheral = null
+        if (mBLEPeripheral != null) {
+            mBLEPeripheral!!.stopAdvertising()
+            mBLEPeripheral = null
         }
         super.onDestroy()
     }
 
-    override fun onTokenRegistration(relyingPartyId: String, callback: FIDOUserCallback) {
+    override fun onTokenRegistration(relyingPartyId: String, callback: FIDO2UserCallback) {
             BiometricPrompt.Builder(applicationContext)
                     .setTitle(title)
                     .setSubtitle(relyingPartyId)
@@ -86,7 +83,36 @@ class U2FActivity : AbstractBleActivity(), FIDOUserInterface {
     override fun registrationCompleted(relyingPartyId: String) {
     }
 
-    override fun onTokenAuthentication(relyingPartyId: String, callback: FIDOUserCallback) {
+    override fun onTokenAuthentication(relyingPartyId: String, callback: FIDO2UserCallback) {
+        BiometricPrompt.Builder(applicationContext)
+                .setTitle(title)
+                .setSubtitle(relyingPartyId)
+                .setDescription(String.format("Do you want to authenticate in %s", relyingPartyId))
+                .setNegativeButton("Cancel", mainExecutor, DialogInterface.OnClickListener { dialog, which ->
+                    callback.denied()
+                })
+                .build()
+                .authenticate(CancellationSignal(), mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        callback.granted()
+                    }
+
+                    override fun onAuthenticationHelp(helpCode: Int, helpString: CharSequence) {
+                        super.onAuthenticationHelp(helpCode, helpString)
+                        callback.denied()
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        callback.denied()
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        callback.denied()
+                    }
+                })
     }
 
     override fun authenticationCompeted(relyingPartyId: String) {

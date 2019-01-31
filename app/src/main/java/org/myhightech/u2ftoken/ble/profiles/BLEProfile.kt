@@ -13,21 +13,18 @@ import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
 import android.util.Log
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.myhightech.u2ftoken.ble.services.DeviceInformationService
 import org.myhightech.u2ftoken.ble.services.FIDO2AuthenticatorService
-import org.myhightech.u2ftoken.fido2.FIDOToken
+import org.myhightech.u2ftoken.ble.services.GattService
+import org.myhightech.u2ftoken.fido2.FIDO2Token
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class U2FProfile(context: Context, token: FIDOToken) {
+class BLEProfile(context: Context, val services: Sequence<GattService>) {
     private val tag: String = this.javaClass.simpleName
     private val debug: Boolean = true
-
-    private val services = listOf(DeviceInformationService(), FIDO2AuthenticatorService(token))
 
     private val handler = Handler(Looper.getMainLooper())
     private val lock = ReentrantLock()
@@ -89,8 +86,8 @@ class U2FProfile(context: Context, token: FIDOToken) {
         override fun run() {
             mIsRunning = true
             try {
-                addService(services[0].setupService())
-                addService(services[1].setupService())
+                services.map { it.setupService() }
+                        .forEach{ addService(it) }
             } catch (e: Exception) {
                 Log.w(tag, e)
             }
@@ -293,14 +290,20 @@ class U2FProfile(context: Context, token: FIDOToken) {
             val advertiseData = AdvertiseData.Builder()
                     .setIncludeTxPowerLevel(false)
                     .setIncludeDeviceName(true)
-                    .addServiceUuid(services[0].getPrimaryServiceUUID())
-                    .addServiceUuid(services[1].getPrimaryServiceUUID())
+                    .let { builder ->
+                        services.map { it.getPrimaryServiceUUID() }
+                                .forEach { builder.addServiceUuid(it) }
+                        builder
+                    }
                     .build()
 
             // set up scan result
             val scanResult = AdvertiseData.Builder()
-                    .addServiceUuid(services[0].getPrimaryServiceUUID())
-                    .addServiceUuid(services[1].getPrimaryServiceUUID())
+                    .let { builder ->
+                        services.map { it.getPrimaryServiceUUID() }
+                                .forEach { builder.addServiceUuid(it) }
+                        builder
+                    }
                     .build()
 
             Log.v(tag, "advertiseData: $advertiseData, scanResult: $scanResult")

@@ -4,16 +4,15 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyPair
 import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.Signature
+import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
-
 
 class AppKey {
 
     companion object {
-
-        fun generateAppKey(keyAlias: String): KeyPair {
-
+        fun generateAppKey(keyAlias: String): ECPublicKey {
             val keyPairGenerator = KeyPairGenerator.getInstance(
                     KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
             keyPairGenerator.initialize(
@@ -26,12 +25,16 @@ class AppKey {
                             .setUserAuthenticationValidityDurationSeconds(120)
                             .build())
 
-            return keyPairGenerator.generateKeyPair()
+            return keyPairGenerator.generateKeyPair().public as ECPublicKey
         }
 
-        fun signMessage(pair: KeyPair, message: ByteArray): ByteArray {
+        fun signMessage(keyAlias: String, message: ByteArray): ByteArray {
+            val ks = KeyStore.getInstance("AndroidKeyStore").apply {
+                load(null)
+            }
+            val entry = ks.getEntry(keyAlias, null) as KeyStore.PrivateKeyEntry
             val ecdsaSign = Signature.getInstance("SHA256withECDSA")
-            ecdsaSign.initSign(pair.private)
+            ecdsaSign.initSign(entry.privateKey)
             ecdsaSign.update(message)
             return ecdsaSign.sign()
         }
