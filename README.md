@@ -2,7 +2,7 @@
 
 This application is an attempt to implement a WebAuthn compatible Bluetooth token for Android phones.
 
-The project is based on https://github.com/kshoji/BLE-HID-Peripheral-for-Android, as it started as a USB token emulation using HID over BLE, but now it implements a BLE WebAuthn token directly.
+The project is based on [kshoji/BLE-HID-Peripheral-for-Android](https://github.com/kshoji/BLE-HID-Peripheral-for-Android), as it started as a USB token emulation using HID over BLE, but now it implements a BLE WebAuthn token directly.
 
 It works with testing sites like [webauthn.io](https://webauthn.io/) and also [Dropbox](https://www.dropbox.com).
 
