@@ -9,7 +9,7 @@ android {
    		targetCompatibility javaTargetCompatibility
    	}
     defaultConfig {
-        applicationId "org.myhightech.org.u2ftoken"
+        applicationId "org.myhightech.u2ftoken"
         minSdkVersion 28
         targetSdkVersion versionTarget
         versionCode versionCodeNum

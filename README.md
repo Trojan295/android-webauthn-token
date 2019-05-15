@@ -1,34 +1,12 @@
-# BLE-HID-Peripheral-for-Android
-[![Build Status](https://travis-ci.org/kshoji/BLE-HID-Peripheral-for-Android.svg?branch=master)](https://travis-ci.org/kshoji/BLE-HID-Peripheral-for-Android)
+# BLE WebAuthn Token for Android
 
-## BLE HID over GATT Profile for Android
+This application is an attempt to implement a WebAuthn compatible Bluetooth token for Android phones.
 
-This library provides BLE HID Peripheral feature to Android devices. <br/>
-Android device will behave as:
+The project is based on https://github.com/kshoji/BLE-HID-Peripheral-for-Android, as it started as a USB token emulation using HID over BLE, but now it implements a BLE WebAuthn token directly.
 
-- BLE Mouse (relative position / absolute position)
-- BLE Keyboard
-- BLE Joystick
+It works with testing sites like [webauthn.io](https://webauthn.io/) and also [Dropbox](https://www.dropbox.com).
 
-Tested connection:
-
-- Android(Peripheral) <--> Android(Central)
-    - Relative Position Mouse, Keyboard
-- Android(Peripheral) <--> OS X(Central)
-    - Absolute Position Mouse, Relative Position Mouse, Keyboard
-
-Currently, connection with iOS central is not tested yet.
-
-Requirements
-------------
-
-- **API Level 21 or later** and **Bluetooth LE Peripheral feature** will be needed.
-
-Repository Overview
--------------------
-
-- Library Project: `lib`
-- Sample Project: `app`
+DO NOT USE THIS PROJECT IN REAL APPLICATIONS! I do not take responsibility for any harm caused by this software.
 
 LICENSE
 =======
