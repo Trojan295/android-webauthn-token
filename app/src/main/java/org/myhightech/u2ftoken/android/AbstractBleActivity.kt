@@ -21,8 +21,13 @@ abstract class AbstractBleActivity : AppCompatActivity() {
             return
         }
 
-        requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-                BleUtils.REQUEST_CODE_ACCESS_LOCATION_PERMISSION)
+        requestPermissions(arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.USE_BIOMETRIC
+            ),
+            BleUtils.REQUEST_CODE_ACCESS_LOCATION_PERMISSION
+        )
 
         if (!BleUtils.isBleSupported(this) || !BleUtils.isBlePeripheralSupported(this)) {
             // display alert and exit

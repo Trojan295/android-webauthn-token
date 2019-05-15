@@ -23,8 +23,6 @@ class U2FActivity : AbstractBleActivity(), FIDO2UserInterface {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_token)
         title = "FIDO2 Token"
-
-        requestPermissions(arrayOf(Manifest.permission.USE_BIOMETRIC), 101)
     }
 
     override fun setupBlePeripheralProvider() {
@@ -36,7 +34,7 @@ class U2FActivity : AbstractBleActivity(), FIDO2UserInterface {
                         76, 160.toByte(), 205.toByte())
                 , this.getPreferences(Context.MODE_PRIVATE), this)
 
-        mBLEPeripheral = BLEProfile(this, sequenceOf(DeviceInformationService(), FIDO2AuthenticatorService(fidoToken)))
+        mBLEPeripheral = BLEProfile(this, sequenceOf(FIDO2AuthenticatorService(fidoToken), DeviceInformationService()))
         mBLEPeripheral!!.startAdvertising()
     }
 

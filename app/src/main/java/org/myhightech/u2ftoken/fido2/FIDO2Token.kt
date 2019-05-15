@@ -5,9 +5,7 @@ import android.util.Log
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import kotlinx.coroutines.channels.Channel
 import org.myhightech.u2ftoken.crypto.AppKey
-import java.security.KeyPair
 import java.security.MessageDigest
-import java.security.interfaces.ECPublicKey
 import kotlinx.coroutines.*
 import java.util.*
 

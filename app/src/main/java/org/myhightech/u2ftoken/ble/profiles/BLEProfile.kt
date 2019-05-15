@@ -13,10 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
 import android.util.Log
-import org.myhightech.u2ftoken.ble.services.DeviceInformationService
-import org.myhightech.u2ftoken.ble.services.FIDO2AuthenticatorService
 import org.myhightech.u2ftoken.ble.services.GattService
-import org.myhightech.u2ftoken.fido2.FIDO2Token
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -48,7 +45,7 @@ class BLEProfile(context: Context, val services: Sequence<GattService>) {
 
     private var mBroadcastReceiver: BroadcastReceiver? = null
 
-    private inner class MyBroadcastReceiver : BroadcastReceiver() {
+    inner class MyBroadcastReceiver : BroadcastReceiver() {
 
         override fun onReceive(context: Context, intent: Intent?) {
             val action = intent?.action
@@ -67,6 +64,8 @@ class BLEProfile(context: Context, val services: Sequence<GattService>) {
                             }
                         }
                         Log.v(tag, "successfully bonded")
+                    } else {
+                        Log.v(tag, "bond status: $state")
                     }
                     BluetoothDevice.ACTION_PAIRING_REQUEST -> Log.v(tag, "BluetoothDevice.ACTION_PAIRING_REQUEST")
                 }
@@ -346,6 +345,8 @@ class BLEProfile(context: Context, val services: Sequence<GattService>) {
                 mBroadcastReceiver = MyBroadcastReceiver()
                 val filter = IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
                 filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST)
+                filter.priority = IntentFilter.SYSTEM_HIGH_PRIORITY
+                Log.v(tag, "registerBroadcast")
                 appContext.registerReceiver(mBroadcastReceiver, filter)
             }
         }

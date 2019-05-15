@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.myhightech.u2ftoken.ble.util.BleUuidUtils
-import org.myhightech.u2ftoken.fido2.FIDO2Response
 import org.myhightech.u2ftoken.fido2.FIDO2Token
 import org.myhightech.u2ftoken.fido2.FIDO2TokenCallback
 import java.util.*
@@ -91,11 +90,13 @@ class FIDO2AuthenticatorService(val fidoToken: FIDO2Token) : GattService {
     }
 
     override fun getCharacteristics(): Set<UUID> {
+        Log.v(tag, "getCharacteristics")
         return setOf(CHARACTERISTIC_U2F_CONTROL_POINT, CHARACTERISTIC_U2F_CONTROL_POINT_LENGTH,
                 CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD, CHARACTERISTIC_U2F_STATUS)
     }
 
     override fun getDescriptors(): Set<UUID> {
+        Log.v(tag, "getDescriptors")
         return setOf(DESCRIPTOR_CLIENT_CHARACTERISTIC_CONFIGURATION)
     }
 
@@ -124,6 +125,7 @@ class FIDO2AuthenticatorService(val fidoToken: FIDO2Token) : GattService {
                                         responseNeeded: Boolean,
                                         offset: Int,
                                         value: ByteArray) {
+        Log.v(tag, "onCharacteristicsWrite")
         when(characteristic.uuid) {
             CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD -> gattServer.sendResponse(device, requestId,
                     BluetoothGatt.GATT_SUCCESS, offset, byteArrayOf())
