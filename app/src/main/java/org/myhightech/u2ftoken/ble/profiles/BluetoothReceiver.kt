@@ -53,8 +53,9 @@ class BluetoothReceiver : BroadcastReceiver() {
                     Log.v(tag, "bond status: $state")
                 }
                 BluetoothDevice.ACTION_PAIRING_REQUEST -> {
-                    intent.putExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, BluetoothDevice.PAIRING_VARIANT_PIN)
-                    //Log.v(tag, "BluetoothDevice.ACTION_PAIRING_REQUEST, variant: $variant")
+                    val variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT,
+                            BluetoothDevice.ERROR)
+                    Log.v(tag, "BluetoothDevice.ACTION_PAIRING_REQUEST, variant: $variant")
                 }
             }
         }
