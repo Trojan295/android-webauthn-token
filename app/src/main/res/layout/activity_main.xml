@@ -13,9 +13,9 @@
     tools:context="org.myhightech.u2ftoken.android.MainActivity">
 
     <Button
-        android:id="@+id/keyboardButton"
+        android:id="@+id/tokenButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="U2F token" />
+        android:text="Enable token" />
 
 </LinearLayout>

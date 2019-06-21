@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import org.myhightech.u2ftoken.R
+import org.myhightech.u2ftoken.ble.profiles.BluetoothReceiver
 
 
 class MainActivity : AppCompatActivity() {
@@ -12,8 +13,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        title = getString(R.string.ble_hid)
+        title = getString(R.string.app_name)
 
-        findViewById<View>(R.id.keyboardButton).setOnClickListener { startActivity(Intent(applicationContext, U2FActivity::class.java)) }
+        findViewById<View>(R.id.tokenButton).setOnClickListener { startActivity(Intent(applicationContext, FIDO2Activity::class.java)) }
+
+        BluetoothReceiver.registerReceivers(this)
     }
 }

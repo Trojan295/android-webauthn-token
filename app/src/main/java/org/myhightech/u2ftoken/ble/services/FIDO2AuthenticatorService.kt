@@ -125,12 +125,15 @@ class FIDO2AuthenticatorService(val fidoToken: FIDO2Token) : GattService {
                                         responseNeeded: Boolean,
                                         offset: Int,
                                         value: ByteArray) {
-        Log.v(tag, "onCharacteristicsWrite")
         when(characteristic.uuid) {
-            CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD -> gattServer.sendResponse(device, requestId,
-                    BluetoothGatt.GATT_SUCCESS, offset, byteArrayOf())
+            CHARACTERISTIC_U2F_SERVICE_REVISION_BITFIELD -> {
+                Log.v(tag, "onCharacteristicsWrite SERVICE_REVISION_BITFIELD response: $serviceRevisionBitfield")
+                gattServer.sendResponse(device, requestId,
+                        BluetoothGatt.GATT_SUCCESS, offset, byteArrayOf())
+            }
 
             CHARACTERISTIC_U2F_CONTROL_POINT -> {
+                Log.v(tag, "onCharacteristicsWrite U2F_CONTROL_POINT recv")
                 if (value[0] and 0x80.toByte() == 0x80.toByte()) {
                     assert(fidoPacket == null)
                     val command = value[0]
@@ -145,15 +148,18 @@ class FIDO2AuthenticatorService(val fidoToken: FIDO2Token) : GattService {
 
                 fidoPacket!!.let {
                     if (it.length.toInt() == it.data.size) {
+                        Log.v(tag, "onCharacteristicsWrite FIDO2Packet received (${fidoPacket!!.command})")
                         GlobalScope.launch(Dispatchers.Default) {
                             fidoToken.dispatch(it.data.toByteArray(), object : FIDO2TokenCallback {
                                 override fun sendKeepAlive() {
+                                    Log.v(tag, "sendKeepAlive")
                                     val payload = byteArrayOf(0x82.toByte(), 0,1, 0x02)
                                     fidoStatusCharacteristic!!.value = payload
                                     gattServer.notifyCharacteristicChanged(device, fidoStatusCharacteristic!!, false)
                                 }
 
                                 override fun sendMessage(message: ByteArray) {
+                                    Log.v(tag, "sendMessage, for command: ${fidoPacket!!.command}, message size: ${message.size},")
                                     val messageSize = message.size.toShort()
                                     val payload = byteArrayOf(-125, *Shorts.toByteArray(messageSize), *message)
                                     fidoStatusCharacteristic!!.value = payload

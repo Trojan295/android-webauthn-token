@@ -14,7 +14,7 @@ class DeviceInformationService : GattService {
 
     var manufacturer = "MHT Corp."
     var firmwareRevision = "0.1"
-    var deviceName = "U2F Token"
+    var deviceName = "FIDO2 Token"
 
     override fun getPrimaryServiceUUID(): ParcelUuid {
         return ParcelUuid.fromString(SERVICE_DEVICE_INFORMATION.toString())
@@ -26,7 +26,7 @@ class DeviceInformationService : GattService {
             val characteristic = BluetoothGattCharacteristic(
                     CHARACTERISTIC_MANUFACTURER_NAME,
                     BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
+                    BluetoothGattCharacteristic.PERMISSION_READ)
             if (!service.addCharacteristic(characteristic)) {
                 throw RuntimeException("failed to add characteristic")
             }
@@ -35,7 +35,7 @@ class DeviceInformationService : GattService {
             val characteristic = BluetoothGattCharacteristic(
                     CHARACTERISTIC_MODEL_NUMBER,
                     BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
+                    BluetoothGattCharacteristic.PERMISSION_READ)
             if (!service.addCharacteristic(characteristic)) {
                 throw RuntimeException("failed to add characteristic")
             }
@@ -44,7 +44,7 @@ class DeviceInformationService : GattService {
             val characteristic = BluetoothGattCharacteristic(
                     CHARACTERISTIC_FIRMWARE_REVISION,
                     BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED)
+                    BluetoothGattCharacteristic.PERMISSION_READ)
             if (!service.addCharacteristic(characteristic)) {
                 throw RuntimeException("failed to add characteristic")
             }

@@ -10,7 +10,7 @@ android {
    	}
     defaultConfig {
         applicationId "org.myhightech.u2ftoken"
-        minSdkVersion 28
+        minSdkVersion 23
         targetSdkVersion versionTarget
         versionCode versionCodeNum
         versionName versionNameString

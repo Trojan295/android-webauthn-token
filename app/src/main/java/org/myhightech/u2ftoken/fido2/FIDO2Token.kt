@@ -31,6 +31,8 @@ class FIDO2Token(val aaGuid: ByteArray,
                  private val prefs: SharedPreferences,
                  private val userInterface: FIDO2UserInterface) {
 
+    private val tag = javaClass.simpleName
+
     private var signCount = prefs.getInt("signCount", 0)
         set(value) {
             field = value
@@ -40,6 +42,7 @@ class FIDO2Token(val aaGuid: ByteArray,
         }
 
     private fun signMessage(keyAlias: String, message: ByteArray): ByteArray {
+        Log.v(tag, "signMessage")
         signCount++
         return AppKey.signMessage(keyAlias, message)
     }
@@ -60,11 +63,13 @@ class FIDO2Token(val aaGuid: ByteArray,
 
     fun getInfo(callback: FIDO2TokenCallback) {
         val response = AuthenticatorGetIntoResponse(arrayOf("FIDO_2_0"), aaGuid)
+        Log.v(tag, "sending GET_INFO response")
         callback.sendMessage(response.serialize())
     }
 
     fun register(clientDataHash: ByteArray, relyingPartyId: String, credentialId: ByteArray,
                  callback: FIDO2TokenCallback) {
+        Log.v(tag, "register FIDO2 token")
         fun normalizeSize(input: ByteArray): ByteArray {
             val result = ArrayList<Byte>()
             if (input[0] == 0x00.toByte()) {
@@ -98,9 +103,10 @@ class FIDO2Token(val aaGuid: ByteArray,
                         callback.sendKeepAlive()
                         result = channel.poll()
                     }
-                    result!!
-                }
+                    result
+                }!!
         ) {
+            Log.v(tag, "register, user denied")
             return
         }
 
@@ -112,10 +118,9 @@ class FIDO2Token(val aaGuid: ByteArray,
         val x = normalizeSize(publicKey.w.affineX.toByteArray())
         val y = normalizeSize(publicKey.w.affineY.toByteArray())
 
-        Log.i("FIDO", Arrays.toString(publicKey.encoded))
-        Log.i("FIDO", signCount.toString())
+        Log.v(tag, "register, public key: ${Arrays.toString(publicKey.encoded)}")
 
-        val flags = createFlags(true, true, true)
+        val flags = createFlags(register = true, userPresent = true, userVerified = true)
 
         val authenticatorData = AuthenticatorData(digest, flags, signCount,
                 CredentialData(aaGuid, credentialId, ECCredentialPublicKey(x, y)))
@@ -123,6 +128,7 @@ class FIDO2Token(val aaGuid: ByteArray,
         val attestationStatement = ES256PackedAttestationStatement(signMessage(relyingPartyId, dataToSign))
 
         val response = AuthenticatorMakeCredentials.Response(authenticatorData, attestationStatement)
+        Log.v(tag, "register, sending response")
         callback.sendMessage(response.serialize())
 
         userInterface.registrationCompleted(relyingPartyId)
@@ -130,6 +136,7 @@ class FIDO2Token(val aaGuid: ByteArray,
 
     fun authenticate(credential: PublicKeyCredentialDescriptors, relyingPartyId: String, clientDataHash: ByteArray,
                      callback: FIDO2TokenCallback) {
+        Log.v(tag, "authenticate using FIDO2 token at $relyingPartyId")
         val channel = Channel<Boolean>()
         userInterface.onTokenAuthentication(relyingPartyId, object : FIDO2UserCallback {
             override fun granted() {
@@ -153,9 +160,10 @@ class FIDO2Token(val aaGuid: ByteArray,
                         callback.sendKeepAlive()
                         result = channel.poll()
                     }
-                    result!!
-                }
+                    result
+                }!!
         ) {
+            Log.v(tag, "authenticate, user denied")
             return
         }
 
@@ -170,6 +178,7 @@ class FIDO2Token(val aaGuid: ByteArray,
         val signature = signMessage(relyingPartyId, dataToSign)
 
         val response = AuthenticatorGetAssertion.Response(credential, authenticatorData, signature)
+        Log.v(tag, "authenticate, sending response for $relyingPartyId")
         callback.sendMessage(response.serialize())
 
         userInterface.authenticationCompeted(relyingPartyId)
@@ -177,6 +186,7 @@ class FIDO2Token(val aaGuid: ByteArray,
 
     fun dispatch(data: ByteArray, tokenCallback: FIDO2TokenCallback) {
         val parser = CBORFactory().createParser(data.sliceArray(1 until data.size))
+        Log.v(tag, "dispatch, command ${data[0]}")
         when(data[0]) {
             GET_INFO -> getInfo(tokenCallback)
             MAKE_CREDENTIALS -> {
